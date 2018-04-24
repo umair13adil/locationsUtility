@@ -1,13 +1,22 @@
 package com.embraceit.batchdrawgeolocations
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.PorterDuff
 import android.location.Location
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import android.widget.FrameLayout
+import android.widget.Toast
+import com.embraceit.batchdrawgeolocations.badgeLayout.BadgeTextView
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -19,11 +28,14 @@ import java.math.BigDecimal
 import java.util.*
 
 
-class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
+class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener, GoogleMap.OnMarkerDragListener {
 
     val TAG = MapsActivity::class.java.simpleName
     private lateinit var mMap: GoogleMap
     var selectedCase = 0
+
+    internal var markerPoints: MutableList<LatLng>? = ArrayList()
+    private var lastMarker: Marker? = null
 
     @SuppressLint("MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,18 +51,27 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
             when (selectedCase) {
                 R.id.case1 -> {
-                    doForLocations(R.array.locations_1, R.array.locations_actual_1, true)
+                    drawRoutes(true)
                 }
                 R.id.case2 -> {
-                    doForLocations(R.array.locations_2, R.array.locations_actual_2, true)
+                    doForLocations(R.array.locations_1, R.array.locations_actual_1, true)
                 }
                 R.id.case3 -> {
-                    doForLocations(R.array.locations_3, R.array.locations_actual_3, true)
+                    doForLocations(R.array.locations_2, R.array.locations_actual_2, true)
                 }
                 R.id.case4 -> {
+                    doForLocations(R.array.locations_3, R.array.locations_actual_3, true)
+                }
+                R.id.case5 -> {
                     createMiniFences(R.array.locations_actual_3)
                 }
             }
+        }
+
+        btn_clear.setOnClickListener {
+            mMap.clear()
+            markerPoints?.clear()
+            lastMarker?.remove()
         }
     }
 
@@ -66,18 +87,22 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         when (item?.itemId) {
             R.id.case1 -> {
                 selectedCase = R.id.case1
-                doForLocations(R.array.locations_1, R.array.locations_actual_1, false)
+                drawRoutes(true)
             }
             R.id.case2 -> {
                 selectedCase = R.id.case2
-                doForLocations(R.array.locations_2, R.array.locations_actual_2, false)
+                doForLocations(R.array.locations_1, R.array.locations_actual_1, false)
             }
             R.id.case3 -> {
                 selectedCase = R.id.case3
-                doForLocations(R.array.locations_3, R.array.locations_actual_3, false)
+                doForLocations(R.array.locations_2, R.array.locations_actual_2, false)
             }
             R.id.case4 -> {
                 selectedCase = R.id.case4
+                doForLocations(R.array.locations_3, R.array.locations_actual_3, false)
+            }
+            R.id.case5 -> {
+                selectedCase = R.id.case5
                 createMiniFences(R.array.locations_actual_3)
             }
         }
@@ -95,9 +120,33 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
      */
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
+        mMap.setOnMarkerClickListener(this)
+        mMap.setOnMarkerDragListener(this)
 
-        selectedCase = R.id.case1
-        doForLocations(R.array.locations_1, R.array.locations_actual_1, false)
+        val cameraPosition = CameraPosition.Builder().target(LatLng(55.58446, 12.304166)).zoom(16f).build()
+        mMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition))
+
+        mMap.setOnMarkerClickListener { marker ->
+
+            if (marker.tag != null) {
+                marker.remove()
+                if (markerPoints != null && markerPoints?.size!! > 0)
+                    markerPoints?.removeAt(markerPoints?.size!! - 1)
+            }
+            true
+        }
+
+        mMap.setOnPolygonClickListener {
+            it.remove()
+        }
+
+        mMap.setOnMapClickListener { latLng ->
+
+            drawMarker(latLng)
+            drawRoutes(false)
+        }
+
+        Toast.makeText(this, "Put some markers on Map to start simulating behaviour.", Toast.LENGTH_LONG).show()
     }
 
     @SuppressLint("MissingPermission")
@@ -156,6 +205,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             radius = maxMiles.plus(additionalMiles).plus(100)
         }
 
+        val firstLatLng = actualLocations.first().split(",".toRegex())
+        val cameraPosition = CameraPosition.Builder().target(LatLng(firstLatLng.first().toDouble(), firstLatLng.last().toDouble())).zoom(13f).build()
+        mMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition))
+
         drawPaths(swipedLocations, Color.BLUE, filter, radius)
         drawPaths(actualLocations, Color.GREEN, false, radius)
 
@@ -167,34 +220,38 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun getBounds(locations: List<String>): LatLngBounds {
+        var bounds = LatLngBounds(LatLng(0.0, 0.0), LatLng(0.0, 0.0))
+        try {
+            val builder = LatLngBounds.Builder()
 
-        val builder = LatLngBounds.Builder()
+            locations.forEach {
+                val firstLatLng = it.split(",".toRegex())
 
-        locations.forEach {
-            val firstLatLng = it.split(",".toRegex())
+                var latitude = 0.0
+                var longitude = 0.0
 
-            var latitude = 0.0
-            var longitude = 0.0
+                latitude += firstLatLng.first().toDouble()
+                longitude += firstLatLng.last().toDouble()
 
-            latitude += firstLatLng.first().toDouble()
-            longitude += firstLatLng.last().toDouble()
+                builder.include(LatLng(latitude, longitude))
+            }
 
-            builder.include(LatLng(latitude, longitude))
+            val tmpBounds = builder.build()
+            val center = tmpBounds.center
+
+            /** Add 2 points 1000m northEast and southWest of the center.
+             * They increase the bounds only, if they are not already larger
+             * than this.
+             * 1000m on the diagonal translates into about 709m to each direction. */
+            val northEast = move(center, 709.0, 709.0)
+            val southWest = move(center, -709.0, -709.0)
+            builder.include(southWest)
+            builder.include(northEast)
+
+            bounds = builder.build()
+        } catch (e: Exception) {
+
         }
-
-        val tmpBounds = builder.build()
-        val center = tmpBounds.center
-
-        /** Add 2 points 1000m northEast and southWest of the center.
-         * They increase the bounds only, if they are not already larger
-         * than this.
-         * 1000m on the diagonal translates into about 709m to each direction. */
-        val northEast = move(center, 709.0, 709.0)
-        val southWest = move(center, -709.0, -709.0)
-        builder.include(southWest)
-        builder.include(northEast)
-
-        val bounds = builder.build()
 
         return bounds
     }
@@ -237,8 +294,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                     firstLatLngSwiped = it.split(",".toRegex())
 
                     //var zoomLevel = getZoomLevel(LatLng(firstLatLngSwiped.first().toDouble(), firstLatLngSwiped.last().toDouble()), mMap, 15000)
-                    val cameraPosition = CameraPosition.Builder().target(LatLng(firstLatLngSwiped.first().toDouble(), firstLatLngSwiped.last().toDouble())).zoom(13f).build()
-                    mMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition))
                 }
                 .subscribe()
     }
@@ -419,5 +474,90 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun meterToLatitude(meterToNorth: Double): Double {
         val rad = meterToNorth / EARTHRADIUS
         return Math.toDegrees(rad)
+    }
+
+    private fun getMarkerBitmapFromView(count: Int): Bitmap {
+
+        val customMarkerView = (getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater).inflate(R.layout.view_custom_marker, null)
+
+        BadgeTextView.update(this, customMarkerView as FrameLayout, BadgeTextView.Builder()
+                //.textBackgroundColor(array[new Random().nextInt(array.length)])
+                .textColor(Color.WHITE))
+        BadgeTextView.getBadgeTextView(customMarkerView as FrameLayout).setBadgeCount(count)
+        customMarkerView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+        customMarkerView.layout(0, 0, customMarkerView.getMeasuredWidth(), customMarkerView.getMeasuredHeight())
+        customMarkerView.buildDrawingCache()
+        val returnedBitmap = Bitmap.createBitmap(customMarkerView.getMeasuredWidth(), customMarkerView.getMeasuredHeight(),
+                Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(returnedBitmap)
+        canvas.drawColor(Color.WHITE, PorterDuff.Mode.SRC_IN)
+        val drawable = customMarkerView.getBackground()
+        if (drawable != null)
+            drawable.draw(canvas)
+        customMarkerView.draw(canvas)
+        return returnedBitmap
+    }
+
+    override fun onMarkerDragStart(marker: Marker) {}
+
+    override fun onMarkerDrag(marker: Marker) {
+        mMap.animateCamera(CameraUpdateFactory.newLatLng(marker.position))
+    }
+
+    override fun onMarkerDragEnd(marker: Marker) {
+        var position = marker.tag as Int
+        position = position - 1
+        markerPoints?.set(position, marker.position)
+    }
+
+    override fun onMarkerClick(marker: Marker): Boolean {
+        return false
+    }
+
+    private fun drawMarker(latLng: LatLng) {
+        // Adding new item to the ArrayList
+        markerPoints?.add(latLng)
+
+        // Creating MarkerOptions
+        val options = MarkerOptions()
+
+        // Setting the position of the marker
+        options.position(latLng)
+        options.draggable(true)
+        options.icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(markerPoints?.size!!)))
+
+        // Add new marker to the Google Map Android API V2
+        val marker = mMap.addMarker(options)
+        marker.tag = markerPoints?.size
+
+        //Set Latest marker to variable so it can be deleted later
+        lastMarker = marker
+    }
+
+    private fun drawRoutes(filter: Boolean) {
+        mMap.clear()
+
+        val actualLocations = arrayListOf<String>()
+        markerPoints?.forEach {
+            actualLocations.add("${it.latitude},${it.longitude}")
+        }
+
+        val actualMiles = getActualMiles(actualLocations)
+        val maxMiles = getMaxMiles(actualLocations)
+        val bounds = getBounds(actualLocations)
+
+        val additionalMiles = getAdditionalMiles(actualLocations, bounds.center)
+        var radius = 0.0
+
+        if (maxMiles!! > additionalMiles!!) {
+            radius = maxMiles
+        } else {
+            radius = maxMiles.plus(additionalMiles).plus(100)
+        }
+
+        if (actualLocations.isNotEmpty()) {
+            drawPaths(actualLocations, Color.BLACK, filter, radius)
+            drawCircle(bounds.center, radius, "Center, Radius: ${radius.toInt()}", "Actual Miles: ${actualMiles?.toInt()} miles, Max Miles: ${maxMiles.toInt()}")
+        }
     }
 }

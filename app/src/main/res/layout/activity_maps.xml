@@ -11,14 +11,30 @@
         android:layout_height="match_parent"
         tools:context=".MapsActivity" />
 
-    <Button
-        android:id="@+id/btn_filter"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
         android:layout_margin="5dp"
-        android:background="@color/colorPrimaryDark"
-        android:text="Filter"
-        android:textColor="#FFFFFF" />
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@color/colorPrimaryDark"
+            android:text="Filter"
+            android:textColor="#FFFFFF"
+            android:layout_marginRight="25dp"/>
+
+        <Button
+            android:id="@+id/btn_clear"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@color/colorPrimaryDark"
+            android:text="Clear"
+            android:textColor="#FFFFFF" />
+    </LinearLayout>
 
 </FrameLayout>

@@ -3,26 +3,26 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/case1"
-        android:title="Case 1"
+        android:title="Create and Simulate"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/case2"
-        android:title="Case 2"
+        android:title="Case 1"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/case3"
-        android:title="Case 3"
+        android:title="Case 2"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/case4"
-        android:title="Case 4"
+        android:title="Case 3"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/case5"
-        android:title="Case 5"
+        android:title="Mini GeoFences"
         app:showAsAction="never" />
 </menu>
