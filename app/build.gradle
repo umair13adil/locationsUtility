@@ -18,7 +18,23 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig getSigningConfig()
+            android.applicationVariants.all { variant ->
+                def date = new Date();
+                def formattedDate = date.format('dd MMMM yyyy')
+                variant.outputs.all {
+                    def newApkName
+                    newApkName = "locationUtility-${variant.versionName}, ${formattedDate}.apk"
+                    outputFileName = newApkName;
+                }
+            }
         }
+    }
+    lintOptions {
+        checkReleaseBuilds false
+        // Or, if you prefer, you can continue to check for errors in release builds,
+        // but continue the build even when errors are found:
+        abortOnError false
     }
 }
 
