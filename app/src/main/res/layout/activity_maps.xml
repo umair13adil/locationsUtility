@@ -23,10 +23,10 @@
             android:id="@+id/btn_filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginRight="25dp"
             android:background="@color/colorPrimaryDark"
             android:text="Filter"
-            android:textColor="#FFFFFF"
-            android:layout_marginRight="25dp"/>
+            android:textColor="#FFFFFF" />
 
         <Button
             android:id="@+id/btn_clear"
@@ -36,5 +36,14 @@
             android:text="Clear"
             android:textColor="#FFFFFF" />
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/txt_info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="@color/colorPrimaryDark"
+        android:textSize="16sp"
+        android:textStyle="bold" />
 
 </FrameLayout>

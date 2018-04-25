@@ -27,7 +27,7 @@ import java.math.BigDecimal
 import java.util.*
 
 
-class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener, GoogleMap.OnMarkerDragListener {
+class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarkerDragListener {
 
     val TAG = MapsActivity::class.java.simpleName
     private lateinit var mMap: GoogleMap
@@ -47,6 +47,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
 
         btn_filter.setOnClickListener {
             mMap.clear()
+            txt_info?.text = ""
 
             when (selectedCase) {
                 R.id.case1 -> {
@@ -62,7 +63,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
                     doForLocations(R.array.locations_3, R.array.locations_actual_3, true)
                 }
                 R.id.case5 -> {
-                    createMiniFences(R.array.locations_actual_3)
+                    doForLocations(R.array.locations_4, R.array.locations_actual_4, true)
                 }
             }
         }
@@ -71,7 +72,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
             mMap.clear()
             markerPoints?.clear()
             lastMarker?.remove()
+            txt_info?.text = ""
         }
+
+        //Simulate by default
+        selectedCase = R.id.case1
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -102,7 +107,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
             }
             R.id.case5 -> {
                 selectedCase = R.id.case5
-                createMiniFences(R.array.locations_actual_3)
+                doForLocations(R.array.locations_4, R.array.locations_actual_4, true)
             }
         }
         return super.onOptionsItemSelected(item)
@@ -119,7 +124,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
      */
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
-        mMap.setOnMarkerClickListener(this)
         mMap.setOnMarkerDragListener(this)
 
         val cameraPosition = CameraPosition.Builder().target(LatLng(55.58446, 12.304166)).zoom(16f).build()
@@ -495,10 +499,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         markerPoints?.set(position, marker.position)
     }
 
-    override fun onMarkerClick(marker: Marker): Boolean {
-        return false
-    }
-
     private fun drawMarker(latLng: LatLng) {
         // Adding new item to the ArrayList
         markerPoints?.add(latLng)
@@ -527,22 +527,31 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
             actualLocations.add("${it.latitude},${it.longitude}")
         }
 
-        val actualMiles = getActualMiles(actualLocations)
-        val maxMiles = getMaxMiles(actualLocations)
-        val bounds = getBounds(actualLocations)
-
-        val additionalMiles = getAdditionalMiles(actualLocations, bounds.center)
-        var radius = 0.0
-
-        if (maxMiles!! > additionalMiles!!) {
-            radius = maxMiles
-        } else {
-            radius = maxMiles.plus(additionalMiles).plus(100)
-        }
-
         if (actualLocations.isNotEmpty()) {
-            drawPaths(actualLocations, Color.BLACK, filter, radius)
-            drawCircle(bounds.center, radius, "Center, Radius: ${radius.toInt()}", "Actual Miles: ${actualMiles?.toInt()} miles, Max Miles: ${maxMiles.toInt()}")
+            //Get center of locations
+            val bounds = getBounds(actualLocations)
+
+            //Get max radius & then draw circle with that radius
+            val listOfDistance = arrayListOf<Double>()
+            Flowable.fromIterable(actualLocations)
+                    .concatMap({ s ->
+                        Flowable.just<String>(s)
+                    })
+                    .doOnNext() {
+                        val location = it.split(",".toRegex())
+                        listOfDistance.add(distance(location.first().toDouble(), location.last().toDouble(), bounds.center.latitude, bounds.center.longitude)!!)
+                    }
+                    .doOnComplete {
+                        val radius = listOfDistance.max()!!.plus(50)
+
+                        txt_info?.text = "Radius: ${radius.toInt()}\nBlack: Actual Route"
+
+                        if (actualLocations.isNotEmpty()) {
+                            drawPaths(actualLocations, Color.BLACK, filter, radius)
+                            drawCircle(bounds.center, radius, "Center, Radius: ${radius.toInt()}", "")
+                        }
+                    }
+                    .subscribe()
         }
     }
 
@@ -557,9 +566,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
                     listOfDistance.add(distance(location.first().toDouble(), location.last().toDouble(), centerLocation.latitude, centerLocation.longitude)!!)
                 }
                 .doOnComplete {
-                    drawPaths(swipedLocations!!, Color.BLUE, filter, listOfDistance.max()!!)
-                    drawPaths(actualLocations!!, Color.GREEN, false, listOfDistance.max()!!)
-                    drawCircle(centerLocation, listOfDistance.max()!!, "Center, Radius: ${listOfDistance.max()!!.toInt()}", "")
+                    val radius = listOfDistance.max()!!.plus(50)
+                    drawPaths(swipedLocations!!, Color.BLUE, filter, radius)
+                    drawPaths(actualLocations!!, Color.GREEN, false, radius)
+
+                    txt_info?.text = "Radius: ${radius.toInt()}\nGreen: Actual Route\nBlue: Swiped Route"
+
+                    drawCircle(centerLocation, radius, "Center, Radius: ${radius.toInt()}", "")
                 }
                 .subscribe()
     }
