@@ -25,4 +25,8 @@
         android:id="@+id/case5"
         android:title="Case 4"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/case6"
+        android:title="Case 5"
+        app:showAsAction="never" />
 </menu>
