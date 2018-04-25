@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:minWidth="24dp"
+    android:minHeight="48dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:background="?attr/actionBarItemBackground">
+
+    <ImageView
+        android:id="@+id/menu_badge_icon"
+        android:layout_width="65dp"
+        android:layout_height="75dp"
+        android:layout_gravity="center"
+        android:scaleType="centerInside"
+        android:visibility="visible"
+        android:src="@drawable/ic_pin"
+        />
+
+    <com.embraceit.batchdrawgeolocations.badgeLayout.BadgeView
+        android:id="@+id/menu_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="right|top"
+        android:gravity="center"
+        android:textStyle="bold"
+        android:textColor="@android:color/white"
+        android:maxLines="1"
+        android:ellipsize="none"
+        android:textSize="10sp"
+        app:mbtv_backgroundColor="#EF4738"
+        android:background="@color/colorPrimary"
+        android:visibility="gone"/>
+
+    <com.embraceit.batchdrawgeolocations.badgeLayout.BadgeView
+        android:id="@+id/menu_badge_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="right|top"
+        android:gravity="center"
+        android:textStyle="bold"
+        android:textColor="@android:color/white"
+        android:maxLines="1"
+        android:ellipsize="none"
+        android:textSize="10sp"
+        app:mbtv_backgroundColor="@color/colorPrimaryDark"
+        android:visibility="visible"/>
+</FrameLayout>
