@@ -9,7 +9,6 @@ import android.graphics.PorterDuff
 import android.location.Location
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
@@ -128,7 +127,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
 
         mMap.setOnMarkerClickListener { marker ->
 
-            if (marker.tag != null) {
+            if (marker.tag != null && selectedCase == R.id.case1) {
                 marker.remove()
                 if (markerPoints != null && markerPoints?.size!! > 0)
                     markerPoints?.removeAt(markerPoints?.size!! - 1)
@@ -142,8 +141,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
 
         mMap.setOnMapClickListener { latLng ->
 
-            drawMarker(latLng)
-            drawRoutes(false)
+            if (selectedCase == R.id.case1) {
+                drawMarker(latLng)
+                drawRoutes(false)
+            }
         }
 
         Toast.makeText(this, "Put some markers on Map to start simulating behaviour.", Toast.LENGTH_LONG).show()
@@ -191,32 +192,16 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         val swipedLocations = Arrays.asList(*resources.getStringArray(locations))
         val actualLocations = Arrays.asList(*resources.getStringArray(actualLocation))
 
-        val actualMiles = getActualMiles(actualLocations)
-        val maxMiles = getMaxMiles(actualLocations)
-
+        //Get center of locations
         val bounds = getBounds(actualLocations)
 
-        val additionalMiles = getAdditionalMiles(actualLocations, bounds.center)
-        var radius = 0.0
+        //Get max radius & then draw circle with that radius
+        getMaxRadius(actualLocations, swipedLocations, bounds.center, filter)
 
-        if (maxMiles!! > additionalMiles!!) {
-            radius = maxMiles
-        } else {
-            radius = maxMiles.plus(additionalMiles).plus(100)
-        }
-
+        //Focus on that area
         val firstLatLng = actualLocations.first().split(",".toRegex())
         val cameraPosition = CameraPosition.Builder().target(LatLng(firstLatLng.first().toDouble(), firstLatLng.last().toDouble())).zoom(13f).build()
         mMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition))
-
-        drawPaths(swipedLocations, Color.BLUE, filter, radius)
-        drawPaths(actualLocations, Color.GREEN, false, radius)
-
-        drawCircle(bounds.center, radius, "Center, Radius: ${radius.toInt()}", "Actual Miles: ${actualMiles?.toInt()} miles, Max Miles: ${maxMiles.toInt()}")
-
-        Log.i(TAG, "Actual Miles: $actualMiles miles,  Radius: $radius, Max Miles: $maxMiles, Additional: $additionalMiles")
-
-        //createMiniFences(actualLocation)
     }
 
     private fun getBounds(locations: List<String>): LatLngBounds {
@@ -559,5 +544,23 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
             drawPaths(actualLocations, Color.BLACK, filter, radius)
             drawCircle(bounds.center, radius, "Center, Radius: ${radius.toInt()}", "Actual Miles: ${actualMiles?.toInt()} miles, Max Miles: ${maxMiles.toInt()}")
         }
+    }
+
+    private fun getMaxRadius(actualLocations: List<String>?, swipedLocations: List<String>?, centerLocation: LatLng, filter: Boolean) {
+        val listOfDistance = arrayListOf<Double>()
+        Flowable.fromIterable(actualLocations)
+                .concatMap({ s ->
+                    Flowable.just<String>(s)
+                })
+                .doOnNext() {
+                    val location = it.split(",".toRegex())
+                    listOfDistance.add(distance(location.first().toDouble(), location.last().toDouble(), centerLocation.latitude, centerLocation.longitude)!!)
+                }
+                .doOnComplete {
+                    drawPaths(swipedLocations!!, Color.BLUE, filter, listOfDistance.max()!!)
+                    drawPaths(actualLocations!!, Color.GREEN, false, listOfDistance.max()!!)
+                    drawCircle(centerLocation, listOfDistance.max()!!, "Center, Radius: ${listOfDistance.max()!!.toInt()}", "")
+                }
+                .subscribe()
     }
 }
