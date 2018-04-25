@@ -188,8 +188,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         Flowable.fromIterable(realTimeLocations)
                 .concatMap({ s ->
-                    Flowable.just<String>(s).delay(500L, TimeUnit.MILLISECONDS, AndroidSchedulers.mainThread())
+                    Flowable.just<String>(s).delay(250L, TimeUnit.MILLISECONDS, AndroidSchedulers.mainThread())
                 })
+                .repeat()
                 .doOnNext() {
                     val location = it.split(",".toRegex())
 
@@ -204,25 +205,26 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         Flowable.fromIterable(expectedLocations)
                 .concatMap({ s ->
-                    Flowable.just<String>(s).delay(500L, TimeUnit.MILLISECONDS, AndroidSchedulers.mainThread())
+                    Flowable.just<String>(s).delay(1L, TimeUnit.SECONDS, AndroidSchedulers.mainThread())
                 })
+                .repeat()
                 .doOnNext() {
                     val location = it.split(",".toRegex())
 
                     if (currentLocation != null) {
                         val distance = distance(location.first().toDouble(), location.last().toDouble(), currentLocation?.latitude!!, currentLocation?.longitude!!)
 
-                        if (distance != 0.0 && distance <= 100) {
+                        if (distance != 0.0 && distance <= 300) {
                             Log.i(TAG, "Swiped at correct location!  ${distance}")
 
                             listOfCorrectSwipes.add("${location.first()},${location.last()}")
                             drawPaths(listOfCorrectSwipes, Color.BLUE, false, 0.0)
 
                         } else {
-                            Log.i(TAG, "Swiped at In-correct location! ${distance}")
+                            //Log.i(TAG, "Swiped at In-correct location! ${distance}")
 
-                            listOfInCorrectSwipes.add("${location.first()},${location.last()}")
-                            drawPaths(listOfInCorrectSwipes, Color.RED, false, 0.0)
+                            //listOfInCorrectSwipes.add("${currentLocation?.latitude!!},${currentLocation?.longitude!!}")
+                            //drawPaths(listOfInCorrectSwipes, Color.RED, false, 0.0)
                         }
                     }
 
