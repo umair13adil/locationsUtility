@@ -22,9 +22,11 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import io.reactivex.Flowable
+import io.reactivex.android.schedulers.AndroidSchedulers
 import kotlinx.android.synthetic.main.activity_maps.*
 import java.math.BigDecimal
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarkerDragListener {
@@ -35,6 +37,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
 
     internal var markerPoints: MutableList<LatLng>? = ArrayList()
     private var lastMarker: Marker? = null
+    val locationValidator by lazy { LocationValidator(); }
 
     @SuppressLint("MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -260,8 +263,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         //Draw with Delay
         Flowable.fromIterable(locations)
                 .concatMap({ s ->
-                    Flowable.just<String>(s)
-                    //.delay(1L, TimeUnit.SECONDS, AndroidSchedulers.mainThread())
+                    Flowable.just<String>(s).delay(1L, TimeUnit.SECONDS, AndroidSchedulers.mainThread())
                 })
                 .filter {
                     val location = it.split(",".toRegex())
@@ -275,14 +277,27 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
                     val separate1 = it.split(",".toRegex())
                     //Log.i(TAG, separate1.first() + " .... " + separate1.last())
 
-                    mMap.addPolyline(PolylineOptions()
-                            .add(LatLng(firstLatLngSwiped.first().toDouble(), firstLatLngSwiped.last().toDouble()),
-                                    LatLng(separate1.first().toDouble(), separate1.last().toDouble()))
-                            .width(5f).color(color).geodesic(true))
+                    if (color == Color.BLUE) {
+                        if (locationValidator.validateNewValue(LatLng(separate1.first().toDouble(), separate1.last().toDouble()))) {
+                            val lastLoc = locationValidator.lastLocation();
+                            if (lastLoc != null) {
+                                mMap.addPolyline(PolylineOptions()
+                                        .add(LatLng(lastLoc.latitude, lastLoc.longitude),
+                                                LatLng(separate1.first().toDouble(), separate1.last().toDouble()))
+                                        .width(5f).color(color).geodesic(true))
 
-                    firstLatLngSwiped = it.split(",".toRegex())
+                            }
+                        }
+                    } else {
+                        mMap.addPolyline(PolylineOptions()
+                                .add(LatLng(firstLatLngSwiped.first().toDouble(), firstLatLngSwiped.last().toDouble()),
+                                        LatLng(separate1.first().toDouble(), separate1.last().toDouble()))
+                                .width(5f).color(color).geodesic(true))
 
-                    //var zoomLevel = getZoomLevel(LatLng(firstLatLngSwiped.first().toDouble(), firstLatLngSwiped.last().toDouble()), mMap, 15000)
+                        firstLatLngSwiped = it.split(",".toRegex())
+
+                        //var zoomLevel = getZoomLevel(LatLng(firstLatLngSwiped.first().toDouble(), firstLatLngSwiped.last().toDouble()), mMap, 15000)
+                    }
                 }
                 .subscribe()
     }
