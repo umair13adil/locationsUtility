@@ -1,11 +1,10 @@
-package com.embraceit.batchdrawgeolocations.badgeLayout;
+package com.embraceit.batchdrawgeolocations.utils.badgeLayout;
 
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.drawable.Drawable;
-import android.support.v7.widget.Toolbar;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.MenuItem;
@@ -20,14 +19,16 @@ import com.embraceit.batchdrawgeolocations.R;
 import static android.util.TypedValue.COMPLEX_UNIT_DIP;
 import static android.util.TypedValue.applyDimension;
 
-public class BadgeDrawable {
+/**
+ * Created by Aaqib on 12/5/2016.
+ */
+
+public class BadgeTextView {
 
     public static class Builder{
 
         public int textBackgroundColor; // TRANSPARENT = 0;
         public int textColor; // TRANSPARENT = 0;
-        public int iconTintColor; // TRANSPARENT = 0;
-        private Drawable iconDrawable;
         public Builder(){
 
         }
@@ -41,16 +42,6 @@ public class BadgeDrawable {
             return this;
         }
 
-        public Builder iconTintColor(int iconTintColor){
-            this.iconTintColor = iconTintColor;
-            return this;
-        }
-
-        public Builder iconDrawable(Drawable iconDrawable){
-            this.iconDrawable = iconDrawable;
-            return this;
-        }
-
     }
 
 
@@ -59,33 +50,33 @@ public class BadgeDrawable {
 
     }
 
-    public static void update(final Activity activity, final MenuItem menu, Builder builder, final Toolbar.OnMenuItemClickListener listener) {
+    public static void update(final Activity activity, final FrameLayout frameLayout, Builder builder) {
+        update(frameLayout, builder);
+
+    }
+
+    public static void update(final Activity activity, final MenuItem menu, Builder builder, final ActionItemBadgeListener listener) {
         if (menu == null) return;
         FrameLayout badge;
+        BadgeView badgeDrawableView;
         BadgeView badgeTextView;
         ImageView imageView;
 
         badge = (FrameLayout) menu.getActionView();
 
-        badgeTextView = badge.findViewById(R.id.menu_badge);
+        badgeDrawableView = badge.findViewById(R.id.menu_badge);
+        badgeTextView = badge.findViewById(R.id.menu_badge_text);
         imageView = badge.findViewById(R.id.menu_badge_icon);
+        badgeDrawableView.setVisibility(View.GONE);
+        imageView.setVisibility(View.GONE);
+        badgeTextView.setVisibility(View.VISIBLE);
 
-        //Display icon in ImageView
-        if(imageView != null && builder != null){
-            if (builder.iconDrawable !=null) {
-                imageView.setImageDrawable(builder.iconDrawable);
-            }
-
-            if (  builder.iconTintColor != Color.TRANSPARENT) {
-                imageView.setColorFilter(builder.iconTintColor);
-            }
+        if (builder != null && builder.textBackgroundColor != Color.TRANSPARENT) {
+            //badgeTextView.setBackgroundColor(builder.textBackgroundColor);
+            imageView.setColorFilter(builder.textBackgroundColor);
         }
 
-        if (badgeTextView != null && builder != null && builder.textBackgroundColor != Color.TRANSPARENT) {
-            badgeTextView.setBackgroundColor(builder.textBackgroundColor);
-        }
-
-        if (badgeTextView != null && builder != null && builder.textColor != Color.TRANSPARENT) {
+        if (builder != null && builder.textColor != Color.TRANSPARENT) {
             badgeTextView.setTextColor(builder.textColor);
         }
 
@@ -97,7 +88,7 @@ public class BadgeDrawable {
                 public void onClick(View v) {
                     boolean consumed = false;
                     if (listener != null) {
-                        consumed = listener.onMenuItemClick(menu);
+                        consumed = listener.onOptionsItemSelected(menu);
                     }
                     if (!consumed) {
                         activity.onMenuItemSelected(Window.FEATURE_OPTIONS_PANEL, menu);
@@ -123,12 +114,43 @@ public class BadgeDrawable {
         menu.setVisible(true);
     }
 
-    public static BadgeView getBadgeDrawable(MenuItem menu) {
+    public static void update(final FrameLayout frameLayout, Builder builder) {
+        FrameLayout badge;
+        BadgeView badgeDrawableView;
+        BadgeView badgeTextView;
+        ImageView imageView;
+
+        badge = frameLayout;
+
+        badgeDrawableView = badge.findViewById(R.id.menu_badge);
+        badgeTextView = badge.findViewById(R.id.menu_badge_text);
+        imageView = badge.findViewById(R.id.menu_badge_icon);
+        badgeDrawableView.setVisibility(View.GONE);
+        imageView.setVisibility(View.VISIBLE);
+        badgeTextView.setVisibility(View.VISIBLE);
+
+        if (builder != null && builder.textBackgroundColor != Color.TRANSPARENT) {
+            //badgeTextView.setBackgroundColor(builder.textBackgroundColor);
+            imageView.setColorFilter(builder.textBackgroundColor);
+        }
+
+        if (builder != null && builder.textColor != Color.TRANSPARENT) {
+            badgeTextView.setTextColor(builder.textColor);
+        }
+    }
+
+    public static BadgeView getBadgeTextView(MenuItem menu) {
         if (menu == null) {
             return null;
         }
         FrameLayout badge = (FrameLayout) menu.getActionView();
-        BadgeView badgeView = badge.findViewById(R.id.menu_badge);
+        BadgeView badgeView = badge.findViewById(R.id.menu_badge_text);
+        return badgeView;
+    }
+
+    public static BadgeView getBadgeTextView(FrameLayout frameLayout) {
+        FrameLayout badge = frameLayout;
+        BadgeView badgeView = badge.findViewById(R.id.menu_badge_text);
         return badgeView;
     }
 

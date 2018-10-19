@@ -1,4 +1,4 @@
-package com.embraceit.batchdrawgeolocations.badgeLayout;
+package com.embraceit.batchdrawgeolocations.utils.badgeLayout;
 
 import android.content.Context;
 import android.content.res.TypedArray;

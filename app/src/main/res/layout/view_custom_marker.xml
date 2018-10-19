@@ -19,7 +19,7 @@
         android:src="@drawable/ic_pin"
         />
 
-    <com.embraceit.batchdrawgeolocations.badgeLayout.BadgeView
+    <com.embraceit.batchdrawgeolocations.utils.badgeLayout.BadgeView
         android:id="@+id/menu_badge"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -34,7 +34,7 @@
         android:background="@color/colorPrimary"
         android:visibility="gone"/>
 
-    <com.embraceit.batchdrawgeolocations.badgeLayout.BadgeView
+    <com.embraceit.batchdrawgeolocations.utils.badgeLayout.BadgeView
         android:id="@+id/menu_badge_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
