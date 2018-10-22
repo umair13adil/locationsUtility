@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Batch Draw GeoLocations</string>
+    <string name="app_name">GeoLocations TestApp</string>
     <string name="title_activity_maps">Map</string>
 
     <!-- Error strings -->
@@ -18,6 +18,7 @@
     <!-- Transition type strings -->
     <string name="geofence_transition_entered">Entered</string>
     <string name="geofence_transition_exited">Exited</string>
+    <string name="geofence_transition_dwelled">Dwelled</string>
     <string name="unknown_geofence_transition">Unknown Transition</string>
 
     <string name="geofence_transition_notification_text">

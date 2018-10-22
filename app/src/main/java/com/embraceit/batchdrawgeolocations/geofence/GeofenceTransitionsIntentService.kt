@@ -5,6 +5,7 @@ import android.app.IntentService
 import android.content.Intent
 import android.text.TextUtils
 import android.util.Log
+import android.widget.Toast
 import com.embraceit.batchdrawgeolocations.R
 import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofencingEvent
@@ -22,6 +23,7 @@ class GeofenceTransitionsIntentService : IntentService("GeofenceTransitionsInten
             val errorMessage = GeofenceErrorMessages.getErrorString(this,
                     geofencingEvent.errorCode)
             Log.e(TAG, errorMessage)
+            Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
             return
         }
 
@@ -29,7 +31,8 @@ class GeofenceTransitionsIntentService : IntentService("GeofenceTransitionsInten
         val geofenceTransition = geofencingEvent.geofenceTransition
 
         // Test that the reported transition was of interest.
-        if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER || geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT) {
+        if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER || geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT
+                || geofenceTransition == Geofence.GEOFENCE_TRANSITION_DWELL) {
 
             // Get the geofences that were triggered. A single event can trigger
             // multiple geofences.
@@ -84,7 +87,13 @@ class GeofenceTransitionsIntentService : IntentService("GeofenceTransitionsInten
         when (transitionType) {
             Geofence.GEOFENCE_TRANSITION_ENTER -> return getString(R.string.geofence_transition_entered)
             Geofence.GEOFENCE_TRANSITION_EXIT -> return getString(R.string.geofence_transition_exited)
+            Geofence.GEOFENCE_TRANSITION_DWELL -> return getString(R.string.geofence_transition_dwelled)
             else -> return getString(R.string.unknown_geofence_transition)
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        //Toast.makeText(this, "Geofence service stopped!", Toast.LENGTH_LONG).show()
     }
 }

@@ -1,24 +1,19 @@
 package com.embraceit.batchdrawgeolocations
 
 import android.annotation.SuppressLint
-import android.location.Location
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
-import com.embraceit.batchdrawgeolocations.geofence.GeoFenceHelper
 import com.embraceit.batchdrawgeolocations.maps.MapHelper
+import com.embraceit.batchdrawgeolocations.maps.MapHelper.drawMarker
 import com.embraceit.batchdrawgeolocations.maps.MapHelper.drawRoutes
-import com.google.android.gms.location.GeofencingClient
+import com.embraceit.batchdrawgeolocations.maps.MapHelper.markerPoints
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
-import com.michaelflisar.rxbus2.RxBusBuilder
-import com.michaelflisar.rxbus2.rx.RxBusMode
 import kotlinx.android.synthetic.main.activity_maps.*
 
 class MapsActivity : BaseActivity(), OnMapReadyCallback, GoogleMap.OnMarkerDragListener {
@@ -26,14 +21,11 @@ class MapsActivity : BaseActivity(), OnMapReadyCallback, GoogleMap.OnMarkerDragL
     val TAG = MapsActivity::class.java.simpleName
     private lateinit var mMap: GoogleMap
     var selectedCase = 0
-    lateinit var geofencingClient: GeofencingClient
 
     @SuppressLint("MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_maps)
-
-        geofencingClient = GeoFenceHelper.init(this)
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
@@ -71,18 +63,6 @@ class MapsActivity : BaseActivity(), OnMapReadyCallback, GoogleMap.OnMarkerDragL
 
         //Simulate by default
         selectedCase = R.id.case1
-
-        RxBusBuilder.create(String::class.java)
-                .withMode(RxBusMode.Main)
-                .subscribe { data ->
-                    Toast.makeText(this, data, Toast.LENGTH_LONG).show()
-                }
-
-        RxBusBuilder.create(Location::class.java)
-                .withMode(RxBusMode.Main)
-                .subscribe { data ->
-                    MapHelper.drawMyMarker(LatLng(data.latitude, data.longitude), mMap)
-                }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -136,15 +116,7 @@ class MapsActivity : BaseActivity(), OnMapReadyCallback, GoogleMap.OnMarkerDragL
         mMap = googleMap
         mMap.setOnMarkerDragListener(this)
 
-        val latLng = LatLng(55.58446, 12.304166)
-        val cameraPosition = CameraPosition.Builder().target(latLng).zoom(16f).build()
-
-        GeoFenceHelper.addGeoFence(latLng, 200.0, mMap)
-        GeoFenceHelper.geoFenceListener(geofencingClient, this)
-
-        mMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition))
-
-        /*mMap.setOnMarkerClickListener { marker ->
+        mMap.setOnMarkerClickListener { marker ->
 
             if (marker.tag != null && selectedCase == R.id.case1) {
                 marker.remove()
@@ -166,7 +138,7 @@ class MapsActivity : BaseActivity(), OnMapReadyCallback, GoogleMap.OnMarkerDragL
             }
         }
 
-        Toast.makeText(this, "Put some markers on Map to start simulating behaviour.", Toast.LENGTH_LONG).show()*/
+        Toast.makeText(this, "Put some markers on Map to start simulating behaviour.", Toast.LENGTH_LONG).show()
     }
 
 

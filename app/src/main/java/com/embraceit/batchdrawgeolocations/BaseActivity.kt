@@ -3,6 +3,7 @@ package com.embraceit.batchdrawgeolocations
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
@@ -11,12 +12,22 @@ import android.support.annotation.NonNull
 import android.support.v4.app.ActivityCompat
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
+import android.widget.Toast
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.michaelflisar.rxbus2.RxBus
+import com.michaelflisar.rxbus2.interfaces.IRxBusQueue
+import com.michaelflisar.rxbus2.rx.RxDisposableManager
+import io.reactivex.processors.BehaviorProcessor
+import org.reactivestreams.Publisher
 
-abstract class BaseActivity : AppCompatActivity() {
+
+abstract class BaseActivity : AppCompatActivity(), IRxBusQueue {
 
     private val TAG = "BaseActivity"
+    private val mResumedProcessor = BehaviorProcessor.createDefault(false)
+
     private lateinit var locationCallback: LocationCallback
     /**
      * Code used in requesting runtime permissions.
@@ -31,7 +42,7 @@ abstract class BaseActivity : AppCompatActivity() {
     /**
      * The desired interval for location updates. Inexact. Updates may be more or less frequent.
      */
-    private val UPDATE_INTERVAL_IN_MILLISECONDS: Long = 10000
+    private val UPDATE_INTERVAL_IN_MILLISECONDS: Long = 40000
 
     /**
      * The fastest rate for active location updates. Exact. Updates will never be more frequent
@@ -63,13 +74,13 @@ abstract class BaseActivity : AppCompatActivity() {
     /**
      * Represents a geographical location.
      */
-    private var mCurrentLocation: Location? = null
+    var mCurrentLocation: Location? = null
 
     /**
      * Tracks the status of the location updates request. Value changes when the user presses the
      * Start Updates and Stop Updates buttons.
      */
-    private var mRequestingLocationUpdates: Boolean = false
+    private var mRequestingLocationUpdates: Boolean = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -93,7 +104,9 @@ abstract class BaseActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (mRequestingLocationUpdates) startLocationUpdates()
+        mResumedProcessor.onNext(true)
+        if (mRequestingLocationUpdates)
+            startLocationUpdates()
     }
 
     private fun createLocationRequest() {
@@ -112,19 +125,23 @@ abstract class BaseActivity : AppCompatActivity() {
         mLocationRequest?.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
     }
 
-    private fun startLocationUpdates() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            mFusedLocationClient?.requestLocationUpdates(mLocationRequest,
-                    locationCallback,
-                    Looper.myLooper())
-        } else {
-            requestPermissions()
-        }
-    }
-
     override fun onPause() {
+        mResumedProcessor.onNext(false)
         super.onPause()
         stopLocationUpdates()
+    }
+
+    override fun onDestroy() {
+        RxDisposableManager.unsubscribe(this)
+        super.onDestroy()
+    }
+
+    override fun isBusResumed(): Boolean {
+        return mResumedProcessor.value!!
+    }
+
+    override fun getResumeObservable(): Publisher<Boolean> {
+        return mResumedProcessor
     }
 
     private fun stopLocationUpdates() {
@@ -191,6 +208,48 @@ abstract class BaseActivity : AppCompatActivity() {
                     mRequestingLocationUpdates = false
                 }
             }// Nothing to do. startLocationupdates() gets called in onResume again.
+        }
+    }
+
+    /**
+     * Requests location updates from the FusedLocationApi. Note: we don't call this unless location
+     * runtime permission has been granted.
+     */
+    private fun startLocationUpdates() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            // Begin by checking if the device has the necessary location settings.
+            mSettingsClient?.checkLocationSettings(mLocationSettingsRequest)
+                    ?.addOnSuccessListener(this) {
+                        Log.i(TAG, "All location settings are satisfied.")
+
+                        mFusedLocationClient?.requestLocationUpdates(mLocationRequest,
+                                locationCallback, Looper.myLooper())
+
+                    }
+                    ?.addOnFailureListener(this) { e ->
+                        val statusCode = (e as ApiException).statusCode
+                        when (statusCode) {
+                            LocationSettingsStatusCodes.RESOLUTION_REQUIRED -> {
+                                Log.i(TAG, "Location settings are not satisfied. Attempting to upgrade " + "location settings ")
+                                try {
+                                    // Show the dialog by calling startResolutionForResult(), and check the
+                                    // result in onActivityResult().
+                                    val rae = e as ResolvableApiException
+                                    rae.startResolutionForResult(this@BaseActivity, REQUEST_CHECK_SETTINGS)
+                                } catch (sie: IntentSender.SendIntentException) {
+                                    Log.i(TAG, "PendingIntent unable to execute request.")
+                                }
+                            }
+                            LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE -> {
+                                val errorMessage = "Location settings are inadequate, and cannot be " + "fixed here. Fix in Settings."
+                                Log.e(TAG, errorMessage)
+                                Toast.makeText(this@BaseActivity, errorMessage, Toast.LENGTH_LONG).show()
+                                mRequestingLocationUpdates = false
+                            }
+                        }
+                    }
+        } else {
+            requestPermissions()
         }
     }
 

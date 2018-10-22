@@ -31,10 +31,10 @@ object MapHelper {
         mMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition))
 
         Flowable.fromIterable(locationsActual)
-                .concatMap({ s ->
+                .concatMap { s ->
                     Flowable.just<String>(s)
                     //.delay(1L, SECONDS, AndroidSchedulers.mainThread())
-                })
+                }
                 .doOnNext() {
                     val location = it.split(",".toRegex())
 
@@ -68,12 +68,14 @@ object MapHelper {
     }
 
     fun drawCircle(latLng: LatLng, radius: Double, title: String, snippet: String, mMap: GoogleMap) {
-        mMap.addMarker(MarkerOptions().position(latLng).title(title).snippet(snippet))
+        //mMap.addMarker(MarkerOptions().position(latLng).title(title).snippet(snippet))
         mMap.addCircle(CircleOptions()
                 .center(latLng)
                 .radius(radius)
                 .strokeColor(Color.parseColor("#F0876E"))
-                .fillColor(Color.parseColor("#FFF2EE")))
+                //.fillColor(Color.parseColor("#FFF2EE"))
+        )
+
     }
 
     private fun drawPaths(locations: List<String>, color: Int, filter: Boolean, radius: Double, mMap: GoogleMap) {
@@ -81,10 +83,10 @@ object MapHelper {
 
         //Draw with Delay
         Flowable.fromIterable(locations)
-                .concatMap({ s ->
+                .concatMap { s ->
                     Flowable.just<String>(s)
                     //.delay(1L, TimeUnit.SECONDS, AndroidSchedulers.mainThread())
-                })
+                }
                 .filter {
                     val location = it.split(",".toRegex())
                     val currentDistance = RouteHelper.distance(firstLatLngSwiped.first().toDouble(), firstLatLngSwiped.last().toDouble(), location.first().toDouble(), location.last().toDouble())!!
@@ -124,9 +126,9 @@ object MapHelper {
             //Get max radius & then draw circle with that radius
             val listOfDistance = arrayListOf<Double>()
             Flowable.fromIterable(actualLocations)
-                    .concatMap({ s ->
+                    .concatMap { s ->
                         Flowable.just<String>(s)
-                    })
+                    }
                     .doOnNext() {
                         val location = it.split(",".toRegex())
                         listOfDistance.add(RouteHelper.distance(location.first().toDouble(), location.last().toDouble(), bounds.center.latitude, bounds.center.longitude)!!)
@@ -146,9 +148,9 @@ object MapHelper {
     private fun getMaxRadius(actualLocations: List<String>?, swipedLocations: List<String>?, centerLocation: LatLng, filter: Boolean, mMap: GoogleMap) {
         val listOfDistance = arrayListOf<Double>()
         Flowable.fromIterable(actualLocations)
-                .concatMap({ s ->
+                .concatMap { s ->
                     Flowable.just<String>(s)
-                })
+                }
                 .doOnNext() {
                     val location = it.split(",".toRegex())
                     listOfDistance.add(RouteHelper.distance(location.first().toDouble(), location.last().toDouble(), centerLocation.latitude, centerLocation.longitude)!!)
@@ -159,7 +161,7 @@ object MapHelper {
                     drawPaths(actualLocations!!, Color.GREEN, false, radius, mMap)
                     drawCircle(centerLocation, radius, "Center, Radius: ${radius.toInt()}", "", mMap)
 
-                    GeoFenceHelper.addGeoFence(centerLocation, radius, mMap)
+                    GeoFenceHelper.addGeoFence(centerLocation, radius, mMap, "")
                 }
                 .subscribe()
     }
@@ -200,8 +202,10 @@ object MapHelper {
         } else {
             animateMarker(myMarker!!, latLng, false, mMap)
         }
+    }
 
-        val cameraPosition = CameraPosition.Builder().target(latLng).zoom(16f).build()
+    fun moveCamera(latLng: LatLng, mMap: GoogleMap) {
+        val cameraPosition = CameraPosition.Builder().target(latLng).zoom(17f).build()
         mMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition))
     }
 
