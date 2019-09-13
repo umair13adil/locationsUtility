@@ -7,7 +7,7 @@ import android.location.Location
 import android.os.BatteryManager
 import android.os.Bundle
 import android.support.v4.content.ContextCompat
-import android.widget.Toast
+import android.util.Log
 import com.embraceit.batchdrawgeolocations.maps.MapHelper
 import com.embraceit.batchdrawgeolocations.maps.PolygonHelper
 import com.google.android.gms.maps.GoogleMap
@@ -61,7 +61,7 @@ class RayCastingActivity : BaseActivity(), OnMapReadyCallback {
                     val currentLocation = LatLng(data.latitude, data.longitude)
                     MapHelper.drawMyMarker(currentLocation, mMap)
 
-                    Toast.makeText(this, "Current Location: ${data.latitude},${data.longitude}", Toast.LENGTH_SHORT).show()
+                    Log.i(TAG, "Current Location: ${data.latitude},${data.longitude}")
 
                     doOnFirstLocationUpdate(currentLocation)
 

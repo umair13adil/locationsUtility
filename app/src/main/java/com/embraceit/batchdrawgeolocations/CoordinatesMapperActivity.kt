@@ -1,28 +1,26 @@
 package com.embraceit.batchdrawgeolocations
 
 import android.annotation.SuppressLint
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
 import android.os.Bundle
-import android.support.v4.content.ContextCompat
 import android.util.Log
+import com.embraceit.batchdrawgeolocations.utils.drawMarker
+import com.embraceit.batchdrawgeolocations.utils.readAssetsXML
 import com.google.android.gms.maps.*
-import com.google.android.gms.maps.model.*
-import kotlinx.android.synthetic.main.activity_geofence_map.*
-import java.io.IOException
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
+import com.google.android.gms.maps.model.Polyline
+import com.google.android.gms.maps.model.PolylineOptions
+import kotlinx.android.synthetic.main.activity_coordinates_mapper.*
 
 /**
  * Created by Umair Adil on 08/12/2016.
  */
 
-class GeoFenceMapActivity : BaseActivity(), OnMapReadyCallback {
+class CoordinatesMapperActivity : BaseActivity(), OnMapReadyCallback {
 
 
-    private val TAG = "GeoFenceMapActivity"
+    private val TAG = "CoordinatesMapper"
 
     private var mMap: GoogleMap? = null
     private var camera_zoom_level = 12.0f
@@ -35,10 +33,13 @@ class GeoFenceMapActivity : BaseActivity(), OnMapReadyCallback {
     //States
     private var markersOnly = false
 
+    //Test File From Assets Directory
+    private val TEST_FILE_NAME = "testFile"
+
     @SuppressLint("MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_geofence_map)
+        setContentView(R.layout.activity_coordinates_mapper)
 
         //Attach map fragment
         showMap()
@@ -69,7 +70,7 @@ class GeoFenceMapActivity : BaseActivity(), OnMapReadyCallback {
     }
 
     private fun loadLocationDataFromFile() {
-        val data = readAssetsXML("testFile", this)
+        val data = readAssetsXML(TEST_FILE_NAME, this)
         val lines: List<String> = data?.reader()?.readLines()!!
 
         val locationData = arrayListOf<LatLng>()
@@ -167,67 +168,5 @@ class GeoFenceMapActivity : BaseActivity(), OnMapReadyCallback {
                 .add(R.id.map_container, fragment)
                 .commit()
         fragment?.getMapAsync(this)
-    }
-
-    fun drawMarker(
-            context: Context,
-            mMap: GoogleMap,
-            markerPoint: LatLng,
-            index: Int,
-            title: String,
-            snippet: String
-    ): Marker {
-        var icon: Bitmap? = null
-
-        when (index) {
-            0 -> icon = drawableToBitmap(ContextCompat.getDrawable(context, R.drawable.ic_person_pin_circle_black_24dp)!!)
-            99 -> icon = drawableToBitmap(ContextCompat.getDrawable(context, R.drawable.ic_marker)!!)
-        }
-
-        return mMap.addMarker(
-                MarkerOptions()
-                        .position(markerPoint)
-                        .snippet(snippet)
-                        .title(title)
-                        .icon(BitmapDescriptorFactory.fromBitmap(icon))
-        )
-    }
-
-    fun drawableToBitmap(drawable: Drawable): Bitmap? {
-        var bitmap: Bitmap? = null
-
-        if (drawable is BitmapDrawable) {
-            if (drawable.bitmap != null) {
-                return drawable.bitmap
-            }
-        }
-
-        if (drawable.intrinsicWidth <= 0 || drawable.intrinsicHeight <= 0) {
-            bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888) // Single color bitmap will be created of 1x1 pixel
-        } else {
-            bitmap = Bitmap.createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
-        }
-
-        val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight())
-        drawable.draw(canvas)
-        return bitmap
-    }
-
-    fun readAssetsXML(fileName: String, context: Context): String? {
-        var xmlString: String? = null
-        val am = context.assets
-        try {
-            val `is` = am.open(fileName)
-            val length = `is`.available()
-            val data = ByteArray(length)
-            `is`.read(data)
-            xmlString = String(data)
-        } catch (e1: IOException) {
-            e1.printStackTrace()
-        } catch (e1: NullPointerException) {
-            e1.printStackTrace()
-        }
-        return xmlString
     }
 }
