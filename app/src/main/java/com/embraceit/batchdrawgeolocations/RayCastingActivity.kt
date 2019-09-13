@@ -1,7 +1,10 @@
 package com.embraceit.batchdrawgeolocations
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.content.IntentFilter
 import android.location.Location
+import android.os.BatteryManager
 import android.os.Bundle
 import android.support.v4.content.ContextCompat
 import android.widget.Toast
@@ -31,73 +34,77 @@ class RayCastingActivity : BaseActivity(), OnMapReadyCallback {
     val ID_CURRENT_FENCE = "MyLocation"
     val ID_POLY1_FENCE = "Polygon1"
     val ID_POLY2_FENCE = "Polygon2"
+    val ID_POLY3_FENCE = "Polygon3"
 
     @SuppressLint("MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_fence)
 
+        val batteryStatus: Intent? = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+
+        val batteryPct: Float? = batteryStatus?.let { intent ->
+            val level: Int = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale: Int = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+            level / scale.toFloat()
+        }
+
+        txt_fence_1.text = "Initial Batter Pct: ${batteryPct?.times(100)}"
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
-
-        RxBusBuilder.create(String::class.java)
-                .withMode(RxBusMode.Main)
-                .subscribe { data ->
-                    Toast.makeText(this, data, Toast.LENGTH_LONG).show()
-
-                    if (data.contains("Entered")) {
-                        txt_fence_1.setTextColor(ContextCompat.getColor(this, R.color.colorGreen))
-                    } else if (data.contains("Exited")) {
-                        txt_fence_1.setTextColor(ContextCompat.getColor(this, R.color.colorRed))
-                    } else if (data.contains("Dwelled")) {
-                        txt_fence_1.setTextColor(ContextCompat.getColor(this, R.color.colorGreen))
-                    }
-                    txt_fence_1.text = data
-                }
 
         RxBusBuilder.create(Location::class.java)
                 .withMode(RxBusMode.Main)
                 .subscribe { data ->
                     val currentLocation = LatLng(data.latitude, data.longitude)
                     MapHelper.drawMyMarker(currentLocation, mMap)
-                    MapHelper.moveCamera(currentLocation, mMap)
 
                     Toast.makeText(this, "Current Location: ${data.latitude},${data.longitude}", Toast.LENGTH_SHORT).show()
 
                     doOnFirstLocationUpdate(currentLocation)
 
-                    val polyVerify = PolygonHelper.isInsidePolygon(currentLocation)
+                    updateUI(currentLocation)
 
-                    if (polyVerify.first) {
-                        txt_fence_2.text = "User is within $ID_POLY1_FENCE area!"
-                        txt_fence_2.setTextColor(ContextCompat.getColor(this, R.color.colorGreen))
-                    } else {
-                        txt_fence_2.text = "User is outside of $ID_POLY1_FENCE area!"
-                        txt_fence_2.setTextColor(ContextCompat.getColor(this, R.color.colorRed))
-                    }
-
-                    if (polyVerify.second) {
-                        txt_fence_3.text = "User is within $ID_POLY2_FENCE area!"
-                        txt_fence_3.setTextColor(ContextCompat.getColor(this, R.color.colorGreen))
-                    } else {
-                        txt_fence_3.text = "User is outside of $ID_POLY2_FENCE area!"
-                        txt_fence_3.setTextColor(ContextCompat.getColor(this, R.color.colorRed))
-                    }
                 }
+    }
+
+    private fun updateUI(currentLocation: LatLng) {
+        val polyVerify = PolygonHelper.isInsidePolygon(currentLocation)
+
+        if (polyVerify.first) {
+            txt_fence_2.text = "User is within $ID_POLY1_FENCE area!"
+            txt_fence_2.setTextColor(ContextCompat.getColor(this, R.color.colorGreen))
+        } else {
+            txt_fence_2.text = "User is outside of $ID_POLY1_FENCE area!"
+            txt_fence_2.setTextColor(ContextCompat.getColor(this, R.color.colorRed))
+        }
+
+        if (polyVerify.second) {
+            txt_fence_3.text = "User is within $ID_POLY2_FENCE area!"
+            txt_fence_3.setTextColor(ContextCompat.getColor(this, R.color.colorGreen))
+        } else {
+            txt_fence_3.text = "User is outside of $ID_POLY2_FENCE area!"
+            txt_fence_3.setTextColor(ContextCompat.getColor(this, R.color.colorRed))
+        }
+
+        if (polyVerify.third) {
+            txt_fence_4.text = "User is within $ID_POLY3_FENCE area!"
+            txt_fence_4.setTextColor(ContextCompat.getColor(this, R.color.colorGreen))
+        } else {
+            txt_fence_4.text = "User is outside of $ID_POLY3_FENCE area!"
+            txt_fence_4.setTextColor(ContextCompat.getColor(this, R.color.colorRed))
+        }
     }
 
     private fun doOnFirstLocationUpdate(currentLocation: LatLng) {
 
         if (mCurrentLocation != null && !fenceCreated) {
 
+            MapHelper.moveCamera(currentLocation, mMap)
 
             PolygonHelper.addText(this, mMap, currentLocation, ID_CURRENT_FENCE, 5, 15)
-
-            val latLng = LatLng(mCurrentLocation?.latitude!!, mCurrentLocation?.longitude!!)
-
-            //Add geofence on current location
-            MapHelper.drawCircle(latLng, 50.0, "GeoFenced", ID_CURRENT_FENCE, mMap)
 
             fenceCreated = true
 
@@ -120,6 +127,21 @@ class RayCastingActivity : BaseActivity(), OnMapReadyCallback {
             PolygonHelper.addText(this, mMap, nearBy2, ID_POLY2_FENCE, 5, 15)
 
             PolygonHelper.drawTrianglePolygonWithFence(mMap, nearBy2)
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribeBy(
+                            onNext = {
+
+                            },
+                            onError = {
+                                it.printStackTrace()
+                            }
+                    )
+
+            val nearBy3 = PolygonHelper.getNearByLocation(currentLocation, 900)
+            PolygonHelper.addText(this, mMap, nearBy3, ID_POLY3_FENCE, 5, 15)
+
+            PolygonHelper.drawRectanglePolygonWithFence2(mMap, nearBy3)
                     .subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribeBy(

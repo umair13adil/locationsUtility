@@ -25,9 +25,9 @@
             android:value="@string/google_maps_key" />
 
         <activity
-            android:name=".RayCastingActivity"
+            android:name=".GeoFenceMapActivity"
             android:label="@string/title_activity_maps"
-            android:screenOrientation="portrait"
+            android:screenOrientation="landscape"
             android:theme="@style/AppThemeNoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -44,10 +44,21 @@
             android:name=".GeoFenceActivity"
             android:label="@string/title_activity_maps"></activity>
 
+        <activity
+            android:name=".RayCastingActivity"
+            android:label="@string/title_activity_maps"></activity>
+
         <service
             android:name=".geofence.GeofenceTransitionsIntentService"
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <receiver android:name=".utils.PowerConnectionReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.ACTION_POWER_CONNECTED"/>
+                <action android:name="android.intent.action.ACTION_POWER_DISCONNECTED"/>
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

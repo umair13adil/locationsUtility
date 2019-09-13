@@ -42,7 +42,7 @@ abstract class BaseActivity : AppCompatActivity(), IRxBusQueue {
     /**
      * The desired interval for location updates. Inexact. Updates may be more or less frequent.
      */
-    private val UPDATE_INTERVAL_IN_MILLISECONDS: Long = 40000
+    private val UPDATE_INTERVAL_IN_MILLISECONDS: Long = 10000
 
     /**
      * The fastest rate for active location updates. Exact. Updates will never be more frequent

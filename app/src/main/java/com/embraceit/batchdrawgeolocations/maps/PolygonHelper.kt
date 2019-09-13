@@ -21,6 +21,7 @@ object PolygonHelper {
     //List of Polygons
     private val listOfPolygon1 = arrayListOf<LatLng>()
     private val listOfPolygon2 = arrayListOf<LatLng>()
+    private val listOfPolygon3 = arrayListOf<LatLng>()
 
     fun getNearByLocation(location: LatLng, radius: Int): LatLng {
         val random = Random()
@@ -116,6 +117,22 @@ object PolygonHelper {
         return getMaxRadius(listOfPolygon1, center)
     }
 
+    fun drawRectanglePolygonWithFence2(map: GoogleMap, latLng: LatLng): Flowable<Pair<LatLng, Double>> {
+
+        listOfPolygon3.addAll(createRectangle2(latLng, 0.003, 0.001))
+
+        //Get center of locations
+        val center = getCenterLatLng(listOfPolygon3)
+
+        map.addPolygon(PolygonOptions()
+                .addAll(listOfPolygon3)
+                .strokeColor(Color.RED)
+                .fillColor(Color.parseColor("#97F3B9FD")))
+
+        //Get max radius & then draw circle with that radius
+        return getMaxRadius(listOfPolygon3, center)
+    }
+
     /**
      * Creates a List of LatLngs that form a rectangle with the given dimensions.
      */
@@ -124,6 +141,17 @@ object PolygonHelper {
                 LatLng(center.latitude, center.longitude),
                 LatLng(center.latitude - halfHeight, center.longitude + halfWidth),
                 LatLng(center.latitude - halfHeight, center.longitude - halfWidth),
+                LatLng(center.latitude + halfHeight, center.longitude - halfWidth),
+                LatLng(center.latitude + halfHeight, center.longitude + halfWidth),
+                LatLng(center.latitude, center.longitude)
+        )
+    }
+
+    private fun createRectangle2(center: LatLng, halfWidth: Double, halfHeight: Double): List<LatLng> {
+        return Arrays.asList(
+                LatLng(center.latitude, center.longitude),
+                LatLng(center.latitude + halfHeight, center.longitude - halfWidth),
+                LatLng(center.latitude + halfHeight, center.longitude + halfWidth),
                 LatLng(center.latitude + halfHeight, center.longitude - halfWidth),
                 LatLng(center.latitude + halfHeight, center.longitude + halfWidth),
                 LatLng(center.latitude, center.longitude)
@@ -179,11 +207,12 @@ object PolygonHelper {
         }
     }
 
-    fun isInsidePolygon(userLocation: LatLng): Pair<Boolean, Boolean> {
+    fun isInsidePolygon(userLocation: LatLng): Triple<Boolean, Boolean, Boolean> {
 
         val poly1 = PolyUtil.containsLocation(userLocation, listOfPolygon1, false)
         val poly2 = PolyUtil.containsLocation(userLocation, listOfPolygon2, false)
+        val poly3 = PolyUtil.containsLocation(userLocation, listOfPolygon3, false)
 
-        return Pair(poly1, poly2)
+        return Triple(poly1, poly2, poly3)
     }
 }
