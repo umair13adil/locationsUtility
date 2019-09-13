@@ -73,7 +73,7 @@ class CoordinatesMapperActivity : BaseActivity(), OnMapReadyCallback {
         val data = readAssetsXML(TEST_FILE_NAME, this)
         val lines: List<String> = data?.reader()?.readLines()!!
 
-        val locationData = arrayListOf<LatLng>()
+        val locationData = arrayListOf<Pair<LatLng, String>>()
 
         lines.forEach {
 
@@ -86,7 +86,9 @@ class CoordinatesMapperActivity : BaseActivity(), OnMapReadyCallback {
             val d1 = dataRead.split(",")
 
             try {
-                locationData.add(LatLng(d1[0].toDouble(), d1[1].toDouble()))
+                val latLng = LatLng(d1[0].toDouble(), d1[1].toDouble())
+                val snippet = "${d1[2]};{${latLng.latitude},${latLng.longitude}}"
+                locationData.add(Pair(latLng, snippet))
             } catch (e: Exception) {
 
             }
@@ -95,7 +97,7 @@ class CoordinatesMapperActivity : BaseActivity(), OnMapReadyCallback {
         val filtered = cleanUpLocationData(locationData)
 
         if (!markersOnly) {
-            val locationsLatLng = PolylineOptions().addAll(filtered).color(Color.MAGENTA).width(5.0f)
+            val locationsLatLng = PolylineOptions().addAll(filtered.map { it.first }).color(Color.MAGENTA).width(5.0f)
             val p1 = mMap?.addPolyline(locationsLatLng)
             polyLinesToClear.add(p1)
             createMarkers(filtered)
@@ -104,22 +106,24 @@ class CoordinatesMapperActivity : BaseActivity(), OnMapReadyCallback {
         }
 
         if (filtered.isNotEmpty())
-            mMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(filtered.first(), camera_zoom_level))
+            mMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(filtered.first().first, camera_zoom_level))
     }
 
-    private fun createMarkers(filtered: List<LatLng>) {
+    private fun createMarkers(filtered: List<Pair<LatLng, String>>) {
         mMap?.let { mMap ->
             this.let {
 
                 filtered.forEach { latLng1 ->
 
+                    val title = latLng1.second.split(';')
+
                     //Draw marker on map
                     val m = drawMarker(it,
                             mMap,
-                            latLng1,
+                            latLng1.first,
                             0,
-                            "",
-                            "")
+                            title.first(),
+                            title.last())
 
                     markersToClear.add(m)
                 }
@@ -127,10 +131,10 @@ class CoordinatesMapperActivity : BaseActivity(), OnMapReadyCallback {
         }
     }
 
-    private fun cleanUpLocationData(data: List<LatLng>): List<LatLng> {
+    private fun cleanUpLocationData(data: List<Pair<LatLng, String>>): List<Pair<LatLng, String>> {
 
         val filteredList = data.distinctBy {
-            Pair(it.latitude, it.longitude)
+            Pair(it.first.latitude, it.first.longitude)
         }
 
         var deletedCount = 0
